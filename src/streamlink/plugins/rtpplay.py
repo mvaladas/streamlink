@@ -1,5 +1,6 @@
 import logging
 import re
+from urllib.parse import unquote
 
 from streamlink.plugin import Plugin
 from streamlink.plugin.api import useragents
@@ -10,7 +11,7 @@ log = logging.getLogger(__name__)
 
 class RTPPlay(Plugin):
     _url_re = re.compile(r"https?://www\.rtp\.pt/play/")
-    _m3u8_re = re.compile(r"hls:(?:\s+)?(?:\'|\")(?P<url>[^\"']+)(?:\'|\")")
+    _m3u8_re = re.compile(r"file:.*decodeURIComponent\(\[([^\)]+)\]")
 
     @classmethod
     def can_handle_url(cls, url):
@@ -25,7 +26,8 @@ class RTPPlay(Plugin):
             log.error("Could not find _m3u8_re")
             return
 
-        hls_url = m.group("url")
+        hls_url = eval("\"\".join((" + m.group(1) + "))")
+        hls_url = unquote(hls_url)
         log.debug("Found URL: {0}".format(hls_url))
         streams = HLSStream.parse_variant_playlist(self.session, hls_url)
         if not streams:
